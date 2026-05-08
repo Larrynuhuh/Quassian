@@ -33,7 +33,10 @@ def big_besselj1(x):
     return big_approx
 
 def macmahon(n):
-    m = jax.lax.cond(n % 2 == 0, lambda _: n//2, lambda _: n//2 + 1, operand=None)
+    if n % 2 == 0: 
+        m = n // 2
+    else:
+        m = n // 2 + 1
     k = jnp.arange(11, m+1)
     beta = (k - 0.25) * jnp.pi
     expression = beta + (1/(8*beta)) - (31/(384*beta**3)) + (3779/(15360*beta**5))
@@ -45,44 +48,52 @@ def j0smallroots():
     18.071063967910922, 21.211636629879258, 24.352471530749302, 27.493479132040254, 30.634606468431975], dtype=jnp.float64)
 
 def interior_nodes(n):
-    m = jax.lax.cond(n % 2 == 0, lambda _: n//2, lambda _: n//2 + 1, operand=None)
+    if n % 2 == 0: 
+        m = n // 2
+    else:
+        m = n // 2 + 1
     k = jnp.arange(1, m+1)
-    phi_k = ((k-0.25) * jnp.pi) / (m + 0.5)
+    phi_k = ((k-0.25) * jnp.pi) / (n + 0.5)
 
-    interior = (1 - ((m-1)/(8*m**3)) - 1/(384*m**4) * (39 - (28/(jnp.sin(phi_k)**2)))) * jnp.cos(phi_k)
+    interior = (1 - ((n-1)/(8*n**3)) - 1/(384*n**4) * (39 - (28/(jnp.sin(phi_k)**2)))) * jnp.cos(phi_k)
 
     return interior
 
 def boundary_nodes(n):
-    m = jax.lax.cond(n % 2 == 0, lambda _: n//2, lambda _: n//2 + 1, operand=None)
+    if n % 2 == 0: 
+        m = n // 2
+    else:
+        m = n // 2 + 1
     k = jnp.arange(1, m+1)
 
-    j_k = jnp.concatenate((j0smallroots(), macmahon(m)))
+    j_k = jnp.concatenate((j0smallroots(), macmahon(n)))
+    j_k = j_k[:m]
 
-    psi_k = j_k/(m + 0.5)
+    psi_k = j_k/(n + 0.5)
 
-    boundary_term = psi_k + ((psi_k * 1/jnp.tan(psi_k)) - 1) / (8 * psi_k * (m + 0.5)**2) 
+    boundary_term = psi_k + ((psi_k * 1/jnp.tan(psi_k)) - 1) / (8 * psi_k * (n + 0.5)**2) 
     boundary = jnp.cos(boundary_term)
 
     return boundary
 
-
 def compute_nodes(n):
-    m = jax.lax.cond(n % 2 == 0, lambda _: n//2, lambda _: n//2 + 1, operand=None)
+    if n % 2 == 0: 
+        m = n // 2
+    else:
+        m = n // 2 + 1
     k = jnp.arange(1, m+1)
-    #k_hat = n - k + 1
 
-    interior = interior_nodes(m)
-    boundary = boundary_nodes(m)
+    interior = interior_nodes(n)
+    boundary = boundary_nodes(n)
 
     cond = (m - k + 1) <= jnp.ceil(m**(2/3)/jnp.pi).astype(int)
 
     nodes_raw = jnp.where(cond, boundary, interior)
-    zero_or_not = jax.lax.cond(n % 2 == 0, lambda _: -nodes_raw[1::-1], lambda _: -nodes_raw[::-1], operand=None)
-    nodes = jnp.concatenate((zero_or_not, nodes_raw))
+    nodes_raw = nodes_raw[::-1]
+    
+    if n % 2 == 0:
+        nodes = jnp.concatenate((-nodes_raw[::-1], nodes_raw))
+    else:
+        nodes = jnp.concatenate((-nodes_raw[:0:-1], nodes_raw))
 
     return nodes  
-
-
-
-
