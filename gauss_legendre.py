@@ -79,4 +79,9 @@ def compute_nodes(n):
 
     nodes = jnp.where(cond, boundary, interior)
 
-    return nodes
+    return nodes  
+
+
+def interior_evaluation():
+    ...
+
