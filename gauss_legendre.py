@@ -3,7 +3,6 @@ import jax.numpy as jnp
 jax.config.update("jax_enable_x64", True)
 
 def small_besselj0(x):
-    # Standard Abramowitz & Stegun 9.4.1 (error < 5e-8)
     t = (x / 3.0)**2
     return (1.0 - 2.2499997*t + 1.2656208*(t**2) - 0.3163866*(t**3) + 
             0.0444479*(t**4) - 0.0039444*(t**5) + 0.0002100*(t**6))
@@ -19,7 +18,6 @@ def big_besselj0(x):
 
 
 def small_besselj1(x):
-    # Standard Abramowitz & Stegun 9.4.4 (error < 1.3e-8)
     t = (x / 3.0)**2
     return x * (0.5 - 0.56249985*t + 0.21093573*(t**2) - 0.03954289*(t**3) + 
                 0.00443319*(t**4) - 0.00031761*(t**5) + 0.00001109*(t**6))
@@ -47,7 +45,6 @@ def j0smallroots():
 
 def interior_nodes(n):
     k = jnp.arange(1, n+1)
-    k_hat = n - k + 1
     phi_k = ((k-0.25) * jnp.pi) / (n + 0.5)
 
     interior = (1 - ((n-1)/(8*n**3)) - 1/(384*n**4) * (39 - (28/(jnp.sin(phi_k)**2)))) * jnp.cos(phi_k)
@@ -56,7 +53,6 @@ def interior_nodes(n):
 
 def boundary_nodes(n):
     k = jnp.arange(1, n+1)
-    k_hat = n - k + 1
 
     j_k = jnp.concatenate((j0smallroots(), macmahon(n)))
 
@@ -70,12 +66,12 @@ def boundary_nodes(n):
 
 def compute_nodes(n):
     k = jnp.arange(1, n+1)
-    k_hat = n - k + 1
+    #k_hat = n - k + 1
 
     interior = interior_nodes(n)
     boundary = boundary_nodes(n)
 
-    cond = k_hat <= jnp.ceil(n**(2/3)/jnp.pi).astype(int)
+    cond = (n - k + 1) <= jnp.ceil(n**(2/3)/jnp.pi).astype(int)
 
     nodes = jnp.where(cond, boundary, interior)
 

@@ -18,25 +18,15 @@ def macmahon(n):
     beta = (k - 0.25) * jnp.pi
     return beta + (1/(8*beta)) - (31/(384*beta**3)) + (3779/(15360*beta**5))
 
-def interior_nodes(n, k):
-    phi_k = ((k - 0.25) * jnp.pi) / (n + 0.5)
-    return (1 - ((n - 1)/(8 * n**3)) - 1/(384 * n**4) * (39 - (28/(jnp.sin(phi_k)**2)))) * jnp.cos(phi_k)
 
-def boundary_nodes(n, k):
-    jk_full = jnp.concatenate((j0smallroots(), macmahon(n)))
-    jk = jk_full[:k.shape[0]]
-    psi_k = jk / (n + 0.5)
-    term = psi_k + ((psi_k * (1/jnp.tan(psi_k))) - 1) / (8 * psi_k * (n + 0.5)**2)
-    return jnp.cos(term)
-
-@jax.jit
+@jax.jit(static_argnames=['n'])
 def compute_nodes(n):
     num_half = n // 2
     k = jnp.arange(1, num_half + 1)
     
     # Calculate regimes
-    interior = interior_nodes(n, k)
-    boundary = boundary_nodes(n, k)
+    interior = interior_nodes(n)
+    boundary = boundary_nodes(n)
     
     # Handoff condition
     cond = k <= (n**(2/3) / jnp.pi)
