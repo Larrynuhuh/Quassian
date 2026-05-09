@@ -97,3 +97,20 @@ def compute_nodes(n):
         nodes = jnp.concatenate((-nodes_raw[:0:-1], nodes_raw))
 
     return nodes  
+
+def interior_asymptotic(n):
+    x = compute_nodes(n)
+    theta = jnp.arccos(x)
+
+    log_ratio = jnp.exp(jax.scipy.special.gammaln(n + 1.0) - jax.scipy.special.gammaln(n + 1.5))
+    Cn = jnp.sqrt(4.0 / jnp.pi) * ratio
+    
+    m = jnp.array([0.0, 1.0])
+    hnm = 0.25/(n + 1.5)
+    anm = theta * (n + m + 0.5) - (m + 1/2) * jnp.pi/2
+
+    expression = Cn * hnm * (jnp.cos(anm)/(2 * jnp.sin(theta))**(m + 0.5))
+    return expression
+
+def boundary_asymptotic(n): 
+    ...
