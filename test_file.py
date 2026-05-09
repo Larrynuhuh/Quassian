@@ -30,23 +30,23 @@ def run_benchmark(n):
     avg_jax = np.mean(jax_times)
     
     # 3. SciPy baseline
-    '''scipy_times = []    
+    scipy_times = []    
     for _ in range(10): 
         start = time.perf_counter()
         scipy_nodes, _ = roots_legendre(n)
         scipy_times.append(time.perf_counter() - start)
-    avg_scipy = np.mean(scipy_times)'''
+    avg_scipy = np.mean(scipy_times)
 
     # 4. Accuracy
     jax_nodes = np.array(compute_nodes(n)) # Move to CPU for comparison
     # Ensure both are sorted the same way!
-    #max_err = np.max(np.abs(np.sort(jax_nodes) - np.sort(scipy_nodes)))
+    max_err = np.max(np.abs(np.sort(jax_nodes) - np.sort(scipy_nodes)))
 
     print(f"Avg JAX runtime:   {avg_jax*1000:.4f} ms")
-    '''print(f"Avg SciPy runtime: {avg_scipy*1000:.4f} ms")
+    print(f"Avg SciPy runtime: {avg_scipy*1000:.4f} ms")
     print(f"Speedup:           {avg_scipy/avg_jax:.1f}x")
-    print(f"Max Abs Error:     {max_err:.2e}")'''
+    print(f"Max Abs Error:     {max_err:.2e}")
 
-#run_benchmark(500)
-run_benchmark(1_000_000)
+run_benchmark(500)
+run_benchmark(1000)
 #run_benchmark(19879)

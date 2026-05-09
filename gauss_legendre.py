@@ -99,8 +99,7 @@ def compute_nodes(n):
     return nodes  
 
 def interior_asymptotic(n):
-    x = compute_nodes(n)
-    theta = jnp.arccos(x)
+    theta = jnp.arccos(compute_nodes(n))
 
     log_ratio = jnp.exp(jax.scipy.special.gammaln(n + 1.0) - jax.scipy.special.gammaln(n + 1.5))
     Cn = jnp.sqrt(4.0 / jnp.pi) * ratio
@@ -113,4 +112,42 @@ def interior_asymptotic(n):
     return expression
 
 def boundary_asymptotic(n): 
-    ...
+    if n % 2 == 0: 
+        m = n // 2
+    else:
+        m = n // 2 + 1
+    k = jnp.arange(1, m+1)
+
+    rho = n + 0.5
+    theta = jnp.arccos(compute_nodes(n))
+
+    def g(x): (x * (1/jnp.tan(x)) - 1) / 2 * x
+    A0 = 1.0
+    A1 = (1/8 * jax.grad(g)(theta)) - (1/8 * g(theta)/theta) - (1/32 * g(theta)**2)
+    B0 = 1/4 * g(theta)
+
+    j0_tiny = small_besselj0(rho * theta)
+    j0_big = big_besselj0(rho * theta)
+
+    j0 = jnp.where(k < 8, j0_tiny, j0_big)
+
+    j1_tiny = small_besselj1(rho * theta)
+    j1_big = big_besselj1(rho * theta)  
+
+    j1 = jnp.where(k < 8, j1_tiny, j1_big)
+
+    term1 = jnp.sqrt(theta/jnp.sin(theta)) 
+    term2 = j0 * (A0 + (A1/rho**2)) + (theta * j1 * (B0/rho))
+
+    return term1 * term2
+
+
+def poly_eval(n):
+    bound = boundary_asymptotic(n)
+    interior = interior_asymptotic(n)
+    theta = jnp.arccos(compute_nodes(n))
+
+    cond = (0 <= theta) & (jnp.pi/6 >= theta)
+    return jnp.where(cond, bound, interior)
+    
+    
