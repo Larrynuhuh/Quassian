@@ -127,7 +127,7 @@ def poly_eval(n, x):
     cond = (jnp.pi/6 >= theta) | (theta >= 5*jnp.pi/6)
     return jnp.where(cond, bound, interior)
 
-
+def f(theta, x): return poly_eval(theta, x)
     
 def derivative_eval(n, x):
     Pn = poly_eval(n, x)
@@ -163,58 +163,18 @@ def integrate(func, a, b, n):
     return integral
 
 
-test_func = lambda x: jnp.exp(x)
-a, b = 0, 1
-true_value = jnp.exp(1) - 1
+# The Runge "Polynomial Killer"
+test_func = lambda x: 1 / (1 + 2500 * x**2)
+a, b = -1, 1
 
-# Try a high n
-n_test = 1000
+# True value: (2/sqrt(2500)) * arctan(sqrt(2500))
+# For 2500, that is (2/50) * arctan(50)
+true_value = 0.062035459261058
+
+n_test = 1000 # Your method should handle this easily
 result = integrate(test_func, a, b, n_test)
 
-print(f"Testing n = {n_test}")
+print(f"Testing Steep Runge (n = {n_test})")
 print(f"Calculated: {result:.16f}")
 print(f"Actual:     {true_value:.16f}")
 print(f"Error:      {abs(result - true_value):.2e}")
-
-
-
-'''theta = jnp.arccos(compute_nodes(1000))
-
-interior = interior_asymptotic(1000, compute_nodes(1000))
-boundary = boundary_asymptotic(1000, compute_nodes(1000))
-
-A0 = 1.0
-A1 = (1/8 * jax.vmap(jax.grad(g))(theta)) - (1/8 * g(theta)/theta) - (1/32 * g(theta)**2)
-B0 = 1/4 * g(theta)
-x = compute_nodes(1000)
-n = 1000
-theta = jnp.arccos(x)
-k = jnp.arange(1, x.shape[0]+1)
-
-rho = n + 0.5
-
-def g(x): return (x * (1/jnp.tan(x)) - 1) / (2 * x)
-A0 = 1.0
-A1 = (1/8 * jax.vmap(jax.grad(g))(theta)) - (1/8 * g(theta)/theta) - (1/32 * g(theta)**2)
-B0 = 1/4 * g(theta)
-
-j0_tiny = small_besselj0(rho * theta)
-j0_big = big_besselj0(rho * theta)
-
-j0 = jnp.where(k < 50, j0_tiny, j0_big)
-
-j1_tiny = small_besselj1(rho * theta)
-j1_big = big_besselj1(rho * theta)  
-
-j1 = jnp.where(k < 50, j1_tiny, j1_big)
-
-term1 = jnp.sqrt(theta/jnp.sin(theta)) 
-term2 = j0 * (A0 + (A1/rho**2)) + (theta * j1 * (B0/rho))
-
-
-print(jnp.max(jnp.abs(A1)))
-print(jnp.max(jnp.abs(B0)))
-print(jnp.max(abs(term1)))
-print(jnp.max(abs(term2)))
-print(jnp.max(abs(j0)))
-print(jnp.max(abs(j1)))'''
