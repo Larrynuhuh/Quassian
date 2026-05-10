@@ -1,36 +1,24 @@
 import jax
 import jax.numpy as jnp
+import scipy
+import numpy as np
 jax.config.update("jax_enable_x64", True)
 
-def small_besselj0(x):
-    t = (x / 3.0)**2
-    return (1.0 - 2.2499997*t + 1.2656208*(t**2) - 0.3163866*(t**3) + 
-            0.0444479*(t**4) - 0.0039444*(t**5) + 0.0002100*(t**6))
+def scipy_j0(x):
+    x = np.asarray(x, dtype=np.float64)
+    return scipy.special.j0(x)
 
+def bessel_j0(x):
+    out_shape = jax.ShapeDtypeStruct(x.shape, jnp.float64)
+    return jax.pure_callback(scipy_j0, out_shape, x)
 
-def big_besselj0(x):
-    p0 = 1 - 0.00109862*(8/x)**2 + 0.00002734*(8/x)**4
-    q0 = -0.01562499*(8/x) + 0.00014304*(8/x)**3
+def scipy_j1(x):
+    x = np.asarray(x, dtype=np.float64)
+    return scipy.special.j1(x)
 
-    big_approx = jnp.sqrt(2/(jnp.pi * x)) * (p0 * jnp.cos(x - jnp.pi/4) - q0 * jnp.sin(x - jnp.pi/4))
-
-    return big_approx
-
-
-def small_besselj1(x):
-    t = (x / 3.0)**2
-    return x * (0.5 - 0.56249985*t + 0.21093573*(t**2) - 0.03954289*(t**3) + 
-                0.00443319*(t**4) - 0.00031761*(t**5) + 0.00001109*(t**6))
-
-def big_besselj1(x):
-    f1 = 8/x
-
-    p1 = 1 + 0.00183105*(f1)**2 - 0.00003516*(f1)**4 + 0.00000245*(f1**6)
-    q1 = 0.04687499*(f1) - 0.00032337*(f1)**3 + 0.00001571*(f1**5)
-
-    big_approx = jnp.sqrt(2/(jnp.pi * x)) * (p1 * jnp.cos(x - 3*jnp.pi/4) - q1 * jnp.sin(x - 3*jnp.pi/4))
-
-    return big_approx
+def bessel_j1(x):
+    out_shape = jax.ShapeDtypeStruct(x.shape, jnp.float64)
+    return jax.pure_callback(scipy_j1, out_shape, x)
 
 def macmahon(n):
     if n % 2 == 0: 
@@ -122,15 +110,8 @@ def boundary_asymptotic(n, x):
     A1 = (1/8 * jax.vmap(jax.grad(g))(theta)) - (1/8 * g(theta)/theta) - (1/32 * g(theta)**2)
     B0 = 1/4 * g(theta)
 
-    j0_tiny = small_besselj0(rho * theta)
-    j0_big = big_besselj0(rho * theta)
-
-    j0 = jnp.where(k < 8, j0_tiny, j0_big)
-
-    j1_tiny = small_besselj1(rho * theta)
-    j1_big = big_besselj1(rho * theta)  
-
-    j1 = jnp.where(k < 8, j1_tiny, j1_big)
+    j0 = bessel_j0(rho * theta)
+    j1 = bessel_j1(rho * theta)
 
     term1 = jnp.sqrt(theta/jnp.sin(theta)) 
     term2 = j0 * (A0 + (A1/rho**2)) + (theta * j1 * (B0/rho))
@@ -157,14 +138,17 @@ def derivative_eval(n, x):
 
     return term
 
+
 def newtoned_nodes(n):
     nodes = compute_nodes(n)
-    theta = jnp.arccos(compute_nodes(n))
+    theta = jnp.arccos(nodes)
 
-    pn_der = -derivative_eval(n, nodes)/jnp.sin(theta)
-    nodes_1 = nodes - poly_eval(n, nodes)/pn_der
+    pn_der = -derivative_eval(n, jnp.cos(theta))/jnp.sin(theta)
+    nodes_1 = nodes - poly_eval(n, jnp.cos(theta))/pn_der
+    pn_der1 = -derivative_eval(n, nodes_1)/jnp.sin(theta)
+    nodes_2 = nodes_1 - poly_eval(n, nodes_1)/pn_der1
 
-    return nodes_1
+    return nodes_2
 
 def compute_weights(n, x):
     return 2/(derivative_eval(n, x)**2)
@@ -179,12 +163,12 @@ def integrate(func, a, b, n):
     return integral
 
 
-'''test_func = lambda x: jnp.exp(x)
+test_func = lambda x: jnp.exp(x)
 a, b = 0, 1
 true_value = jnp.exp(1) - 1
 
 # Try a high n
-n_test = 1000 
+n_test = 1000
 result = integrate(test_func, a, b, n_test)
 
 print(f"Testing n = {n_test}")
@@ -192,15 +176,13 @@ print(f"Calculated: {result:.16f}")
 print(f"Actual:     {true_value:.16f}")
 print(f"Error:      {abs(result - true_value):.2e}")
 
-fast_nodes = jax.jit(compute_nodes, static_argnums=0)
-x = fast_nodes(1000)'''
 
-theta = jnp.arccos(compute_nodes(1000))
+
+'''theta = jnp.arccos(compute_nodes(1000))
 
 interior = interior_asymptotic(1000, compute_nodes(1000))
 boundary = boundary_asymptotic(1000, compute_nodes(1000))
 
-def g(x): return (x * (1/jnp.tan(x)) - 1) / (2 * x)
 A0 = 1.0
 A1 = (1/8 * jax.vmap(jax.grad(g))(theta)) - (1/8 * g(theta)/theta) - (1/32 * g(theta)**2)
 B0 = 1/4 * g(theta)
@@ -235,4 +217,4 @@ print(jnp.max(jnp.abs(B0)))
 print(jnp.max(abs(term1)))
 print(jnp.max(abs(term2)))
 print(jnp.max(abs(j0)))
-print(jnp.max(abs(j1)))
+print(jnp.max(abs(j1)))'''
