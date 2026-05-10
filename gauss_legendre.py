@@ -149,4 +149,45 @@ def poly_eval(n):
 
     
 def derivative_eval(n):
-    ... # Placeholder for future derivative implementation
+    Pn = poly_eval(n)
+    Pn_1 = poly_eval(n-1)
+
+    theta = jnp.arccos(compute_nodes(n))
+    term = ((n * jnp.cos(theta) * Pn) - (n * Pn_1))/jnp.sin(theta)
+
+    return term
+
+def newtoned_nodes(n):
+    nodes = compute_nodes(n)
+    theta = jnp.arccos(compute_nodes(n))
+
+    pn_der = -derivative_eval(n)/jnp.sin(theta)
+    nodes_1 = nodes - poly_eval(n)/pn_der
+
+    return nodes_1
+
+def compute_weights(n):
+    return 2/(derivative_eval(n)**2)
+
+@jax.jit(static_argnums=(0, 3))
+def integrate(func, a, b, n):
+    nodes = newtoned_nodes(n)
+    weights = compute_weights(n)
+    bounded_nodes = ((b+a)/2 + ((b-a)/2) * nodes)
+
+    integral = ((b-a)/2) * jnp.sum(func(bounded_nodes) * weights, axis=0)
+    return integral
+
+
+test_func = lambda x: jnp.exp(x)
+a, b = 0, 1
+true_value = jnp.exp(1) - 1
+
+# Try a high n
+n_test = 1000 
+result = integrate(test_func, a, b, n_test)
+
+print(f"Testing n = {n_test}")
+print(f"Calculated: {result:.16f}")
+print(f"Actual:     {true_value:.16f}")
+print(f"Error:      {abs(result - true_value):.2e}")
