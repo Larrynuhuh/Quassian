@@ -126,8 +126,6 @@ def poly_eval(n, x):
 
     cond = (jnp.pi/6 >= theta) | (theta >= 5*jnp.pi/6)
     return jnp.where(cond, bound, interior)
-
-def f(theta, x): return poly_eval(theta, x)
     
 def derivative_eval(n, x):
     Pn = poly_eval(n, x)
@@ -151,7 +149,9 @@ def newtoned_nodes(n):
     return nodes_2
 
 def compute_weights(n, x):
-    return 2/(derivative_eval(n, x)**2)
+    pn_minus_1 = poly_eval(n - 1, newtoned_nodes(n))
+    weights = (2 * (1 - newtoned_nodes(n)**2)) / (n * pn_minus_1)**2
+    return weights
 
 @jax.jit(static_argnums=(0, 3))
 def integrate(func, a, b, n):
@@ -162,19 +162,3 @@ def integrate(func, a, b, n):
     integral = ((b-a)/2) * jnp.sum(func(bounded_nodes) * weights, axis=0)
     return integral
 
-
-# The Runge "Polynomial Killer"
-test_func = lambda x: 1 / (1 + 2500 * x**2)
-a, b = -1, 1
-
-# True value: (2/sqrt(2500)) * arctan(sqrt(2500))
-# For 2500, that is (2/50) * arctan(50)
-true_value = 0.062035459261058
-
-n_test = 1000 # Your method should handle this easily
-result = integrate(test_func, a, b, n_test)
-
-print(f"Testing Steep Runge (n = {n_test})")
-print(f"Calculated: {result:.16f}")
-print(f"Actual:     {true_value:.16f}")
-print(f"Error:      {abs(result - true_value):.2e}")
