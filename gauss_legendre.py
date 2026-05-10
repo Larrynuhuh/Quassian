@@ -99,21 +99,21 @@ def compute_nodes(n):
     return nodes  
 
 
-def interior_asymptotic(n):
+def interior_asymptotic(n, x):
     log_ratio = jnp.exp(jax.scipy.special.gammaln(n + 1.0) - jax.scipy.special.gammaln(n + 1.5))
     Cn = jnp.sqrt(4.0 / jnp.pi) * log_ratio
     
     m = jnp.array([0.0, 1.0, 2.0])[:, None]
-    theta = jnp.arccos(compute_nodes(n))[None, :]
+    theta = jnp.arccos(x)[None, :]
     hnm = jnp.array([1, 0.25/(n + 1.5), 9/(32.0 * (n + 1.5) * (n + 2.5))])[:, None]
     anm = theta * (n + m + 0.5) - (m + 1/2) * jnp.pi/2
 
     expression = jnp.sum(Cn * hnm * (jnp.cos(anm)/(2 * jnp.sin(theta))**(m + 0.5)), axis=0)
     return expression
 
-def boundary_asymptotic(n): 
-    theta = jnp.arccos(compute_nodes(n))
-    k = jnp.arange(1, n+1)
+def boundary_asymptotic(n, x): 
+    theta = jnp.arccos(x)
+    k = jnp.arange(1, x.shape[0]+1)
 
     rho = n + 0.5
 
@@ -138,21 +138,21 @@ def boundary_asymptotic(n):
     return term1 * term2
 
 
-def poly_eval(n):
-    bound = boundary_asymptotic(n)
-    interior = interior_asymptotic(n)
-    theta = jnp.arccos(compute_nodes(n))
+def poly_eval(n, x):
+    bound = boundary_asymptotic(n, x)
+    interior = interior_asymptotic(n, x)
+    theta = jnp.arccos(x)
 
     cond = (jnp.pi/6 >= theta) | (theta >= 5*jnp.pi/6)
     return jnp.where(cond, bound, interior)
 
 
     
-def derivative_eval(n):
-    Pn = poly_eval(n)
-    Pn_1 = poly_eval(n-1)
+def derivative_eval(n, x):
+    Pn = poly_eval(n, x)
+    Pn_1 = poly_eval(n-1, x)
 
-    theta = jnp.arccos(compute_nodes(n))
+    theta = jnp.arccos(x)
     term = ((n * jnp.cos(theta) * Pn) - (n * Pn_1))/jnp.sin(theta)
 
     return term
@@ -161,25 +161,25 @@ def newtoned_nodes(n):
     nodes = compute_nodes(n)
     theta = jnp.arccos(compute_nodes(n))
 
-    pn_der = -derivative_eval(n)/jnp.sin(theta)
-    nodes_1 = nodes - poly_eval(n)/pn_der
+    pn_der = -derivative_eval(n, nodes)/jnp.sin(theta)
+    nodes_1 = nodes - poly_eval(n, nodes)/pn_der
 
     return nodes_1
 
-def compute_weights(n):
-    return 2/(derivative_eval(n)**2)
+def compute_weights(n, x):
+    return 2/(derivative_eval(n, x)**2)
 
 @jax.jit(static_argnums=(0, 3))
 def integrate(func, a, b, n):
     nodes = newtoned_nodes(n)
-    weights = compute_weights(n)
+    weights = compute_weights(n, nodes)
     bounded_nodes = ((b+a)/2 + ((b-a)/2) * nodes)
 
     integral = ((b-a)/2) * jnp.sum(func(bounded_nodes) * weights, axis=0)
     return integral
 
 
-test_func = lambda x: jnp.exp(x)
+'''test_func = lambda x: jnp.exp(x)
 a, b = 0, 1
 true_value = jnp.exp(1) - 1
 
@@ -191,3 +191,48 @@ print(f"Testing n = {n_test}")
 print(f"Calculated: {result:.16f}")
 print(f"Actual:     {true_value:.16f}")
 print(f"Error:      {abs(result - true_value):.2e}")
+
+fast_nodes = jax.jit(compute_nodes, static_argnums=0)
+x = fast_nodes(1000)'''
+
+theta = jnp.arccos(compute_nodes(1000))
+
+interior = interior_asymptotic(1000, compute_nodes(1000))
+boundary = boundary_asymptotic(1000, compute_nodes(1000))
+
+def g(x): return (x * (1/jnp.tan(x)) - 1) / (2 * x)
+A0 = 1.0
+A1 = (1/8 * jax.vmap(jax.grad(g))(theta)) - (1/8 * g(theta)/theta) - (1/32 * g(theta)**2)
+B0 = 1/4 * g(theta)
+x = compute_nodes(1000)
+n = 1000
+theta = jnp.arccos(x)
+k = jnp.arange(1, x.shape[0]+1)
+
+rho = n + 0.5
+
+def g(x): return (x * (1/jnp.tan(x)) - 1) / (2 * x)
+A0 = 1.0
+A1 = (1/8 * jax.vmap(jax.grad(g))(theta)) - (1/8 * g(theta)/theta) - (1/32 * g(theta)**2)
+B0 = 1/4 * g(theta)
+
+j0_tiny = small_besselj0(rho * theta)
+j0_big = big_besselj0(rho * theta)
+
+j0 = jnp.where(k < 50, j0_tiny, j0_big)
+
+j1_tiny = small_besselj1(rho * theta)
+j1_big = big_besselj1(rho * theta)  
+
+j1 = jnp.where(k < 50, j1_tiny, j1_big)
+
+term1 = jnp.sqrt(theta/jnp.sin(theta)) 
+term2 = j0 * (A0 + (A1/rho**2)) + (theta * j1 * (B0/rho))
+
+
+print(jnp.max(jnp.abs(A1)))
+print(jnp.max(jnp.abs(B0)))
+print(jnp.max(abs(term1)))
+print(jnp.max(abs(term2)))
+print(jnp.max(abs(j0)))
+print(jnp.max(abs(j1)))
