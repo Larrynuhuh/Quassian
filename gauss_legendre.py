@@ -153,7 +153,6 @@ def compute_weights(n, x):
     weights = (2 * (1 - newtoned_nodes(n)**2)) / (n * pn_minus_1)**2
     return weights
 
-@jax.jit(static_argnums=(0, 3))
 def integrate(func, a, b, n):
     nodes = newtoned_nodes(n)
     weights = compute_weights(n, nodes)
