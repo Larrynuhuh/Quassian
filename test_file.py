@@ -20,7 +20,7 @@ def test_quassian():
     true_integral = float((np.sin(test_freq) - np.sin(0.0)) / test_freq)
 
     # We select a high n = 500 to evaluate the engine where GW begins to lag
-    n_nodes = 500
+    n_nodes = 20000
 
     print(f"Test Setup:")
     print(f"-> Function: f(x) = cos({test_freq} * x)")
@@ -52,7 +52,7 @@ def test_quassian():
     print("-" * 60)
 
     # 4. Speed Benchmarking (Running multiple loops)
-    iterations = 100
+    iterations = 10
     print(f"Status: Clocking Quassian over {iterations} loops...")
     
     t0 = time.perf_counter()

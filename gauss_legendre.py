@@ -143,7 +143,7 @@ def newtoned_nodes(n):
 
     pn_der = -derivative_eval(n, jnp.cos(theta))/jnp.sin(theta)
     nodes_1 = nodes - poly_eval(n, jnp.cos(theta))/pn_der
-    pn_der1 = -derivative_eval(n, nodes_1)/jnp.sin(theta)
+    pn_der1 = -derivative_eval(n, nodes_1)/jnp.sin(jnp.arccos(nodes_1))
     nodes_2 = nodes_1 - poly_eval(n, nodes_1)/pn_der1
 
     return nodes_2
@@ -153,6 +153,7 @@ def compute_weights(n, x):
     weights = (2 * (1 - newtoned_nodes(n)**2)) / (n * pn_minus_1)**2
     return weights
 
+@jax.jit(static_argnames=['n', 'func'])
 def integrate(func, a, b, n):
     nodes = newtoned_nodes(n)
     weights = compute_weights(n, nodes)
