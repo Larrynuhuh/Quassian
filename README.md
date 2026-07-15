@@ -10,7 +10,7 @@ GW method obviously starts lacking when we start to increase 'n' to incredibly h
 The implementation is also rather slow, perhaps due to jax.pure_callback calls. Overall, this was quite a complex project
 so I couldn't really optimize it further without losing my mind. Though this project cannot achieve high precision 
 as promised in the Townsend-Hale paper, for rather well-behaved functions with smooth graphs with a generous amount of 'n'
-we can achieve a stable 1e-6 to 1e-10 error in the total integration. You may, however, find compute_nodes a far more 
+we can achieve a stable 1e-6 to 1e-9 error in the total integration. You may, however, find compute_nodes a far more 
 useful thing, allowing extremely fast computation of the nodes of the legendre polynomials with errors getting sparser and 
 lower as we approach infinity. 
 
