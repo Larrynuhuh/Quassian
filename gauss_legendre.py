@@ -127,7 +127,7 @@ def poly_eval(n, x):
     cond = (jnp.pi/6 >= theta) | (theta >= 5*jnp.pi/6)
     return jnp.where(cond, bound, interior)
     
-def derivative_eval(n, x):
+'''def derivative_eval(n, x):
     Pn = poly_eval(n, x)
     Pn_1 = poly_eval(n-1, x)
 
@@ -137,7 +137,7 @@ def derivative_eval(n, x):
     return term
 
 
-def newtoned_nodes(n):
+    def newtoned_nodes(n):
     nodes = compute_nodes(n)
     theta = jnp.arccos(nodes)
 
@@ -146,16 +146,16 @@ def newtoned_nodes(n):
     pn_der1 = -derivative_eval(n, nodes_1)/jnp.sin(jnp.arccos(nodes_1))
     nodes_2 = nodes_1 - poly_eval(n, nodes_1)/pn_der1
 
-    return nodes_2
+    return nodes_2'''
 
 def compute_weights(n, x):
-    pn_minus_1 = poly_eval(n - 1, newtoned_nodes(n))
-    weights = (2 * (1 - newtoned_nodes(n)**2)) / (n * pn_minus_1)**2
+    pn_minus_1 = poly_eval(n - 1, compute_nodes(n))
+    weights = (2 * (1 - compute_nodes(n)**2)) / (n * pn_minus_1)**2
     return weights
 
 @jax.jit(static_argnames=['n', 'func'])
 def integrate(func, a, b, n):
-    nodes = newtoned_nodes(n)
+    nodes = compute_nodes(n)
     weights = compute_weights(n, nodes)
     bounded_nodes = ((b+a)/2 + ((b-a)/2) * nodes)
 
