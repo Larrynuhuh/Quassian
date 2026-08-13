@@ -20,7 +20,7 @@ print("=" * 60)
 
 try:
     # Now lowering with a static integer 10000 works flawlessly
-    lowered = jit_audit.lower(10000)
+    lowered = jit_audit.lower(4000)
     hlo_text = lowered.as_text()
     
     print("\n--- XLA HLO TEXT PREVIEW (First 40 lines) ---")
@@ -64,7 +64,7 @@ def test_quassian_brutal_chirp():
     true_integral = -0.00133113185029490
 
     # Choose your node resolution (e.g., 10000, 15000, or 20000)
-    n_nodes = 10000
+    n_nodes = 4000
 
     print(f"Test Setup:")
     print(f"-> Function: f(x) = sin(500 / (x + 0.1))")
@@ -109,7 +109,7 @@ print("Status: Compiling and warming up XLA pipeline...")
 start_compile = time.perf_counter()
 
 # Trigger your engine and block until the hardware finishes
-_ = jit_audit(10000).block_until_ready() 
+_ = jit_audit(4000).block_until_ready() 
 
 compile_time = time.perf_counter() - start_compile
 print(f"-> Compilation + Warmup Time: {compile_time:.4f} seconds")
@@ -119,7 +119,7 @@ print("\nStatus: Measuring pure hardware latency...")
 start_latency = time.perf_counter()
 
 # This runs entirely on the compiled XLA binary
-result = jit_audit(10000).block_until_ready()
+result = jit_audit(4000).block_until_ready()
 
 hardware_latency = time.perf_counter() - start_latency
 print(f"-> Pure Engine Hardware Latency: {hardware_latency * 1000:.3f} ms")

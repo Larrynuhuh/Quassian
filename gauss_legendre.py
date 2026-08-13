@@ -148,17 +148,44 @@ def poly_eval(n, x):
 
     return nodes_2'''
 
-def compute_weights(n, x):
-    pn_minus_1 = poly_eval(n - 1, compute_nodes(n))
-    weights = (2 * (1 - compute_nodes(n)**2)) / (n * pn_minus_1)**2
-    return weights
+def stable_legendre_recurrence(n, x):
+    """Evaluates the EXACT Legendre polynomial (Pn) and its derivative (dPn) 
+    simultaneously down to full 64-bit machine epsilon using a stable loop."""
+    p0 = jnp.ones_like(x)
+    p1 = x
+    dp0 = jnp.zeros_like(x)
+    dp1 = jnp.ones_like(x)
+    
+    # We use a clean loop to step the algebraic recurrence from 2 up to order n
+    def loop_body(i, carry):
+        pn_2, pn_1, dpn_2, dpn_1 = carry
+        # 1. Exact 3-term recurrence formula for the polynomial
+        pn = ((2 * i - 1) * x * pn_1 - (i - 1) * pn_2) / i
+        # 2. Exact derivative recurrence formula
+        dpn = dpn_2 + (2 * i - 1) * pn_1
+        return pn_1, pn, dpn_1, dpn
+        
+    _, pn, _, dpn = jax.lax.fori_loop(2, n + 1, loop_body, (p0, p1, dp0, dp1))
+    return pn, dpn
 
 @jax.jit(static_argnames=['n', 'func'])
 def integrate(func, a, b, n):
-    nodes = compute_nodes(n)
-    weights = compute_weights(n, nodes)
-    bounded_nodes = ((b+a)/2 + ((b-a)/2) * nodes)
-
-    integral = ((b-a)/2) * jnp.sum(func(bounded_nodes) * weights, axis=0)
+    # 1. Grab your fast Townsend-Hale initial guesses
+    raw_nodes = compute_nodes(n)
+    
+    # 2. Run two Newton steps using the EXACT polynomial evaluator.
+    # This strips away the 1e-7 asymptotic expansion wall!
+    x = raw_nodes
+    for _ in range(2):
+        pn, dpn = stable_legendre_recurrence(n, x)
+        x = x - pn / dpn
+    nodes = x
+    
+    # 3. Calculate exact weights using the matching high-precision polynomial
+    pn_minus_1, _ = stable_legendre_recurrence(n - 1, nodes)
+    weights = (2.0 * (1.0 - nodes**2)) / (n * pn_minus_1)**2
+    
+    # 4. Integrate
+    bounded_nodes = ((b+a)/2.0 + ((b-a)/2.0) * nodes)
+    integral = ((b-a)/2.0) * jnp.sum(func(bounded_nodes) * weights, axis=0)
     return integral
-
