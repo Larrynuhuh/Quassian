@@ -127,41 +127,19 @@ def poly_eval(n, x):
     cond = (jnp.pi/6 >= theta) | (theta >= 5*jnp.pi/6)
     return jnp.where(cond, bound, interior)
     
-'''def derivative_eval(n, x):
-    Pn = poly_eval(n, x)
-    Pn_1 = poly_eval(n-1, x)
-
-    theta = jnp.arccos(x)
-    term = ((n * jnp.cos(theta) * Pn) - (n * Pn_1))/jnp.sin(theta)
-
-    return term
-
-
-    def newtoned_nodes(n):
-    nodes = compute_nodes(n)
-    theta = jnp.arccos(nodes)
-
-    pn_der = -derivative_eval(n, jnp.cos(theta))/jnp.sin(theta)
-    nodes_1 = nodes - poly_eval(n, jnp.cos(theta))/pn_der
-    pn_der1 = -derivative_eval(n, nodes_1)/jnp.sin(jnp.arccos(nodes_1))
-    nodes_2 = nodes_1 - poly_eval(n, nodes_1)/pn_der1
-
-    return nodes_2'''
 
 def stable_legendre_recurrence(n, x):
-    """Evaluates the EXACT Legendre polynomial (Pn) and its derivative (dPn) 
-    simultaneously down to full 64-bit machine epsilon using a stable loop."""
     p0 = jnp.ones_like(x)
     p1 = x
     dp0 = jnp.zeros_like(x)
     dp1 = jnp.ones_like(x)
     
-    # We use a clean loop to step the algebraic recurrence from 2 up to order n
+  
     def loop_body(i, carry):
         pn_2, pn_1, dpn_2, dpn_1 = carry
-        # 1. Exact 3-term recurrence formula for the polynomial
+   
         pn = ((2 * i - 1) * x * pn_1 - (i - 1) * pn_2) / i
-        # 2. Exact derivative recurrence formula
+
         dpn = dpn_2 + (2 * i - 1) * pn_1
         return pn_1, pn, dpn_1, dpn
         
@@ -170,22 +148,18 @@ def stable_legendre_recurrence(n, x):
 
 @jax.jit(static_argnames=['n', 'func'])
 def integrate(func, a, b, n):
-    # 1. Grab your fast Townsend-Hale initial guesses
+
     raw_nodes = compute_nodes(n)
-    
-    # 2. Run two Newton steps using the EXACT polynomial evaluator.
-    # This strips away the 1e-7 asymptotic expansion wall!
+
     x = raw_nodes
     for _ in range(2):
         pn, dpn = stable_legendre_recurrence(n, x)
         x = x - pn / dpn
     nodes = x
-    
-    # 3. Calculate exact weights using the matching high-precision polynomial
+
     pn_minus_1, _ = stable_legendre_recurrence(n - 1, nodes)
     weights = (2.0 * (1.0 - nodes**2)) / (n * pn_minus_1)**2
-    
-    # 4. Integrate
+
     bounded_nodes = ((b+a)/2.0 + ((b-a)/2.0) * nodes)
     integral = ((b-a)/2.0) * jnp.sum(func(bounded_nodes) * weights, axis=0)
     return integral

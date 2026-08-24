@@ -2,7 +2,7 @@ import time
 import numpy as np
 import jax
 import jax.numpy as jnp
-from gauss_legendre import integrate  # Your core global integrator
+from gauss_legendre import integrate  
 
 # 1. High-Frequency Integration Audit Block
 def run_quassian_audit(n):
